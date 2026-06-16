@@ -2363,7 +2363,14 @@ function updateCardStats(k){
 function refreshMain(){
   const today=new Date().toISOString().slice(0,10);
   const todayEvts=S.events.filter(e=>e.date===today);
-  const gcalToday=(gcalEventsCache||[]).filter(ev=>(ev.start?.dateTime||ev.start?.date||'').slice(0,10)===today);
+  const kstNow2=new Date(new Date().getTime()+9*60*60*1000);
+  const todayKST=kstNow2.toISOString().slice(0,10);
+  const gcalToday=(gcalEventsCache||[]).filter(ev=>{
+    const s=ev.start?.dateTime||ev.start?.date||'';
+    if(!s)return false;
+    if(ev.start?.dateTime){const k=new Date(new Date(s).getTime()+9*60*60*1000);return k.toISOString().slice(0,10)===todayKST;}
+    return s.slice(0,10)===todayKST;
+  });
   document.getElementById('k-today').textContent=todayEvts.length+gcalToday.length;
   const totalTodo=CARD_KEYS.reduce((s,k)=>s+(S.todos[k]||[]).filter(t=>!t.done).length,0);
   document.getElementById('k-todo').textContent=totalTodo;
@@ -2470,9 +2477,13 @@ async function calSync() {
   document.getElementById('cal-sync-txt').textContent = '동기화 중...';
 
   try {
-    // 오늘 ~ 30일 후까지 일정 가져오기
+    // 오늘 자정(KST) ~ 30일 후까지 일정 가져오기
     const now    = new Date();
-    const after  = now.toISOString();
+    // KST 오늘 자정부터
+    const kstMidnight = new Date(now);
+    kstMidnight.setHours(0,0,0,0);
+    kstMidnight.setTime(kstMidnight.getTime() - 9*60*60*1000); // KST→UTC
+    const after  = kstMidnight.toISOString();
     const before = new Date(now.getTime() + 30 * 86400000).toISOString();
 
     const res = await fetch(
@@ -2517,7 +2528,7 @@ function renderGCalEvents(events) {
     const start   = ev.start?.dateTime || ev.start?.date || '';
     const isAllDay = !ev.start?.dateTime;
     const date    = start.slice(0, 10);
-    const time    = isAllDay ? '종일' : new Date(start).toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit', hour12:false});
+    const time    = isAllDay ? '종일' : new Date(start).toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit', hour12:false, timeZone:'Asia/Seoul'});
     const d       = new Date(date + 'T12:00:00');
     const wd      = ['일','월','화','수','목','금','토'];
 
@@ -2550,9 +2561,19 @@ function renderGCalTodayPreview(events) {
 }
 
 function refreshMainWithGCal() {
-  const today = new Date().toISOString().slice(0, 10);
+  // KST 기준 오늘 날짜
+  const kstNow = new Date(new Date().getTime() + 9*60*60*1000);
+  const today = kstNow.toISOString().slice(0, 10);
+
   const todayEvts = gcalEventsCache.filter(ev => {
     const start = ev.start?.dateTime || ev.start?.date || '';
+    if (!start) return false;
+    // dateTime은 KST로 변환해서 날짜 비교
+    if (ev.start?.dateTime) {
+      const kst = new Date(new Date(start).getTime() + 9*60*60*1000);
+      return kst.toISOString().slice(0,10) === today;
+    }
+    // 종일 일정은 date 필드가 YYYY-MM-DD 형식
     return start.slice(0, 10) === today;
   });
 
@@ -2583,7 +2604,7 @@ function refreshMainWithGCal() {
   const gcalEvtHtml = todayEvts.map(ev => {
     const start   = ev.start?.dateTime || ev.start?.date || '';
     const isAllDay = !ev.start?.dateTime;
-    const time    = isAllDay ? '종일' : new Date(start).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});
+    const time    = isAllDay ? '종일' : new Date(start).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Asia/Seoul'});
     return `<div class="evt">
       <span class="et">${time}</span>
       <span class="en">${esc(ev.summary||'(제목 없음)')}</span>
