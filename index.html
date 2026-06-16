@@ -2363,20 +2363,16 @@ function updateCardStats(k){
 function refreshMain(){
   const today=new Date().toISOString().slice(0,10);
   const todayEvts=S.events.filter(e=>e.date===today);
-  document.getElementById('k-today').textContent=todayEvts.length;
+  const gcalToday=(gcalEventsCache||[]).filter(ev=>(ev.start?.dateTime||ev.start?.date||'').slice(0,10)===today);
+  document.getElementById('k-today').textContent=todayEvts.length+gcalToday.length;
   const totalTodo=CARD_KEYS.reduce((s,k)=>s+(S.todos[k]||[]).filter(t=>!t.done).length,0);
   document.getElementById('k-todo').textContent=totalTodo;
   const goProj=CARD_KEYS.reduce((s,k)=>s+(S.projects[k]||[]).filter(p=>p.st==='go'||p.st==='hot').length,0);
   document.getElementById('k-proj').textContent=goProj;
   const up=S.ddays.map(d=>ddayN(d.date)).filter(n=>n>=0).sort((a,b)=>a-b);
   document.getElementById('k-dday').textContent=up.length?'D-'+up[0]:'--';
-  // 오늘 일정 미리보기
-  const prev=document.getElementById('today-prev');
-  if(!todayEvts.length){prev.innerHTML=`<div class="no-item">오늘 등록된 일정이 없습니다</div>`;}
-  else{prev.innerHTML=todayEvts.slice(0,4).map(e=>{
-    const tc=TAG_COLOR[e.tag]||'var(--muted)';
-    return`<div class="evt"><span class="et">${e.time||'종일'}</span><span class="en">${esc(e.txt)}</span><span class="ec" style="background:${tc}22;color:${tc};border:1px solid ${tc}44">${TAG_LABEL[e.tag]||''}</span></div>`;
-  }).join('');}
+  // 오늘 일정 미리보기 (로컬 + 구글 캘린더 통합)
+  refreshMainWithGCal();
   CARD_KEYS.forEach(updateCardStats);
 }
 
@@ -2545,41 +2541,58 @@ function renderGCalEvents(events) {
 }
 
 /* ── 메인 오늘 화면에 구글 캘린더 일정 반영 ── */
+// 전역에 캘린더 이벤트 캐시
+let gcalEventsCache = [];
+
 function renderGCalTodayPreview(events) {
-  const today     = new Date().toISOString().slice(0, 10);
-  const todayEvts = events.filter(ev => {
+  gcalEventsCache = events; // 전역 캐시 저장
+  refreshMainWithGCal();   // 메인 화면 전체 재렌더
+}
+
+function refreshMainWithGCal() {
+  const today = new Date().toISOString().slice(0, 10);
+  const todayEvts = gcalEventsCache.filter(ev => {
     const start = ev.start?.dateTime || ev.start?.date || '';
     return start.slice(0, 10) === today;
   });
 
-  if (!todayEvts.length) return;
+  // KPI 업데이트
+  const kToday = document.getElementById('k-today');
+  if (kToday) {
+    const localEvts = S.events.filter(e => e.date === today).length;
+    kToday.textContent = localEvts + todayEvts.length;
+  }
 
-  // 기존 오늘 일정 미리보기에 구글 캘린더 일정 추가
+  // 오늘 일정 미리보기 전체 재구성
   const prev = document.getElementById('today-prev');
   if (!prev) return;
 
-  const gcalHtml = todayEvts.map(ev => {
+  const localEvtHtml = S.events.filter(e=>e.date===today).map(e=>{
+    const tc = {ieum:'var(--biz)',rianhs:'var(--biz)',h430:'var(--biz)',academy:'var(--biz)',
+                lions:'var(--social)',beauty:'var(--social)',family:'var(--home)',infra:'var(--home)'};
+    const tl = {ieum:'이음',rianhs:'리안지사',h430:'430헤어',academy:'아카데미',
+                lions:'라이온스',beauty:'미용사회',family:'가족',infra:'개인'};
+    const c = tc[e.tag]||'var(--muted)';
+    return `<div class="evt">
+      <span class="et">${e.time||'종일'}</span>
+      <span class="en">${esc(e.txt)}</span>
+      <span class="ec" style="background:${c}22;color:${c};border:1px solid ${c}44">${tl[e.tag]||''}</span>
+    </div>`;
+  }).join('');
+
+  const gcalEvtHtml = todayEvts.map(ev => {
     const start   = ev.start?.dateTime || ev.start?.date || '';
     const isAllDay = !ev.start?.dateTime;
-    const time    = isAllDay ? '종일' : new Date(start).toLocaleTimeString('ko-KR', {hour:'2-digit',minute:'2-digit',hour12:false});
+    const time    = isAllDay ? '종일' : new Date(start).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});
     return `<div class="evt">
       <span class="et">${time}</span>
-      <span class="en">${esc(ev.summary || '(제목 없음)')}</span>
+      <span class="en">${esc(ev.summary||'(제목 없음)')}</span>
       <span class="ec" style="background:rgba(90,158,106,.15);color:var(--grn);border:1px solid rgba(90,158,106,.3)">구글</span>
     </div>`;
   }).join('');
 
-  // 오늘 일정 카운터 업데이트
-  const kToday = document.getElementById('k-today');
-  if (kToday) {
-    const cur = parseInt(kToday.textContent) || 0;
-    kToday.textContent = cur + todayEvts.length;
-  }
-
-  // 기존 "오늘 일정 없음" 메시지 제거하고 구글 일정 추가
-  const noItem = prev.querySelector('.no-item');
-  if (noItem) noItem.remove();
-  prev.innerHTML = gcalHtml + prev.innerHTML;
+  const combined = localEvtHtml + gcalEvtHtml;
+  prev.innerHTML = combined || '<div class="no-item">오늘 등록된 일정이 없습니다</div>';
 }
 
 /* ── 비서실 일정 → 구글 캘린더 등록 ── */
