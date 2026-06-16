@@ -1163,6 +1163,452 @@ const CARD_INFO={
 };
 const BRANCHES=['일곡','수완','금호','상무','첨단','계림'];
 
+// 430헤어 + 계림점 기본 직원 데이터 (20260116 현황 기준)
+const DEFAULT_STAFF = {
+"일곡": [
+{
+"id": 1,
+"nm": "하유미",
+"role": "디자이너",
+"nick": "유미",
+"tel": "010-4096-2171",
+"joinDate": "2021.01",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 2,
+"nm": "이민형",
+"role": "디자이너",
+"nick": "민영",
+"tel": "010-8456-8873",
+"joinDate": "2022.09",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 3,
+"nm": "장현아",
+"role": "디자이너",
+"nick": "조이",
+"tel": "010-5186-9440",
+"joinDate": "2022.11",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 4,
+"nm": "이지희",
+"role": "매니저",
+"nick": "매니저",
+"tel": "010-2628-0027",
+"joinDate": "2023.04",
+"payType": "정직원(4대보험)",
+"consults": []
+},
+{
+"id": 5,
+"nm": "박유정",
+"role": "디자이너",
+"nick": "유정",
+"tel": "010-5018-3924",
+"joinDate": "2024.07",
+"payType": "프리랜서(3.3%)",
+"consults": []
+}
+],
+"수완": [
+{
+"id": 1,
+"nm": "장윤아",
+"role": "디자이너",
+"nick": "윤아",
+"tel": "010-2555-2672",
+"joinDate": "2017.08",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 2,
+"nm": "이윤선",
+"role": "디자이너",
+"nick": "청아",
+"tel": "010-4930-2767",
+"joinDate": "2018.02",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 3,
+"nm": "장주희",
+"role": "매니저",
+"nick": "매니저",
+"tel": "010-8442-0952",
+"joinDate": "2022.01",
+"payType": "정직원(4대보험)",
+"consults": []
+},
+{
+"id": 4,
+"nm": "이정윤",
+"role": "디자이너",
+"nick": "윤이",
+"tel": "010-8676-1246",
+"joinDate": "2022.11",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 5,
+"nm": "김단비",
+"role": "디자이너",
+"nick": "단비",
+"tel": "010-4977-2315",
+"joinDate": "2023.01",
+"payType": "프리랜서(3.3%)",
+"consults": []
+}
+],
+"금호": [
+{
+"id": 1,
+"nm": "박소담",
+"role": "매니저",
+"nick": "매니저",
+"tel": "010-9989-1325",
+"joinDate": "2016.01",
+"payType": "정직원(4대보험)",
+"consults": []
+},
+{
+"id": 2,
+"nm": "손은빈",
+"role": "디자이너",
+"nick": "은빈",
+"tel": "010-5572-8343",
+"joinDate": "2020.03",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 3,
+"nm": "김예남",
+"role": "디자이너",
+"nick": "안나",
+"tel": "010-4121-1059",
+"joinDate": "2020.03",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 4,
+"nm": "위하지",
+"role": "디자이너",
+"nick": "하지",
+"tel": "010-4074-9605",
+"joinDate": "2022.11",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 5,
+"nm": "안소영",
+"role": "디자이너",
+"nick": "소영",
+"tel": "010-7647-9757",
+"joinDate": "2024.08",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 6,
+"nm": "이하림",
+"role": "디자이너",
+"nick": "아침",
+"tel": "010-5720-8250",
+"joinDate": "2024.11",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 7,
+"nm": "문수빈",
+"role": "디자이너",
+"nick": "수아",
+"tel": "010-9753-5113",
+"joinDate": "2025.05",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 8,
+"nm": "김세미",
+"role": "디자이너",
+"nick": "세미",
+"tel": "010-3633-0288",
+"joinDate": "2025.05",
+"payType": "프리랜서(3.3%)",
+"consults": []
+}
+],
+"상무": [
+{
+"id": 1,
+"nm": "양다은",
+"role": "매니저",
+"nick": "매니저",
+"tel": "010-2387-7218",
+"joinDate": "2020.03",
+"payType": "정직원(4대보험)",
+"consults": []
+},
+{
+"id": 2,
+"nm": "김진희",
+"role": "디자이너",
+"nick": "진희",
+"tel": "010-7504-0650",
+"joinDate": "2021.04",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 3,
+"nm": "현지영",
+"role": "디자이너",
+"nick": "지유",
+"tel": "010-8832-3184",
+"joinDate": "2021.04",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 4,
+"nm": "이정효",
+"role": "디자이너",
+"nick": "정효",
+"tel": "010-4623-1678",
+"joinDate": "2021.04",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 5,
+"nm": "표의현",
+"role": "디자이너",
+"nick": "현",
+"tel": "010-8024-2015",
+"joinDate": "2021.06",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 6,
+"nm": "안소진",
+"role": "디자이너",
+"nick": "소진",
+"tel": "010-5539-8507",
+"joinDate": "2022.04",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 7,
+"nm": "강수민",
+"role": "디자이너",
+"nick": "수민",
+"tel": "010-9854-0070",
+"joinDate": "2022.04",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 8,
+"nm": "이소현",
+"role": "디자이너",
+"nick": "소현",
+"tel": "010-7197-3484",
+"joinDate": "2023.06",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 9,
+"nm": "채봉균",
+"role": "디자이너",
+"nick": "봉균",
+"tel": "010-9127-9945",
+"joinDate": "2024.06",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 10,
+"nm": "박서연",
+"role": "디자이너",
+"nick": "서연",
+"tel": "010-3908-2446",
+"joinDate": "2024.09",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 11,
+"nm": "박영서",
+"role": "디자이너",
+"nick": "영서",
+"tel": "010-3908-2447",
+"joinDate": "2026.01",
+"payType": "프리랜서(3.3%)",
+"consults": []
+}
+],
+"첨단": [
+{
+"id": 1,
+"nm": "김태연",
+"role": "디자이너",
+"nick": "태연",
+"tel": "010-5104-3177",
+"joinDate": "2020.10",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 2,
+"nm": "정우성",
+"role": "디자이너",
+"nick": "우성",
+"tel": "010-7615-2574",
+"joinDate": "2022.09",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 3,
+"nm": "신휘연",
+"role": "디자이너",
+"nick": "연",
+"tel": "010-8983-0750",
+"joinDate": "2023.04",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 4,
+"nm": "김혜성",
+"role": "디자이너",
+"nick": "채린",
+"tel": "010-9172-0663",
+"joinDate": "2024.09",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 5,
+"nm": "최지해",
+"role": "디자이너",
+"nick": "지해",
+"tel": "010-6271-7540",
+"joinDate": "2024.10",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 6,
+"nm": "조은비",
+"role": "디자이너",
+"nick": "조아",
+"tel": "010-9958-7607",
+"joinDate": "2024.11",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 7,
+"nm": "김소희",
+"role": "매니저",
+"nick": "매니저",
+"tel": "010-5594-0272",
+"joinDate": "2026.01",
+"payType": "정직원(4대보험)",
+"consults": []
+}
+],
+"계림": [
+{
+"id": 1,
+"nm": "조미정",
+"role": "디자이너",
+"nick": "조미",
+"tel": "010-7554-1118",
+"joinDate": "2015.04",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 2,
+"nm": "박지은",
+"role": "디자이너",
+"nick": "소유",
+"tel": "010-3516-5697",
+"joinDate": "2015.04",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 3,
+"nm": "이서은",
+"role": "디자이너",
+"nick": "서은",
+"tel": "010-2559-3289",
+"joinDate": "2020.06",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 4,
+"nm": "신소희",
+"role": "매니저",
+"nick": "매니저",
+"tel": "010-5225-9437",
+"joinDate": "2021.12",
+"payType": "정직원(4대보험)",
+"consults": []
+},
+{
+"id": 5,
+"nm": "박유나",
+"role": "디자이너",
+"nick": "유나",
+"tel": "010-7466-4901",
+"joinDate": "2022.08",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 6,
+"nm": "위희지",
+"role": "디자이너",
+"nick": "희지",
+"tel": "010-3777-3170",
+"joinDate": "2022.09",
+"payType": "프리랜서(3.3%)",
+"consults": []
+},
+{
+"id": 7,
+"nm": "김성경",
+"role": "디자이너",
+"nick": "현은",
+"tel": "010-4619-9871",
+"joinDate": "2023.04",
+"payType": "프리랜서(3.3%)",
+"consults": []
+}
+]
+};
+
 // 리안 가맹점 데이터
 const RIAN_GWANGJU=[
   {nm:'운남점',owner:'김진희',tel:'050-71337-1315',region:'광주'},
@@ -1366,7 +1812,7 @@ function load(){
     BRANCHES.forEach(b=>{
       S.branchNotes[b]=d.branchNotes?.[b]||'';
       S.branchTodos[b]=d.branchTodos?.[b]||[];
-      S.branchStaff[b]=d.branchStaff?.[b]||[];
+      S.branchStaff[b]=d.branchStaff?.[b]||(DEFAULT_STAFF[b]?JSON.parse(JSON.stringify(DEFAULT_STAFF[b])):[]);
     });
     if(d.storeIssues) S.storeIssues=d.storeIssues;
     if(d.hqTasks) S.hqTasks=d.hqTasks;
@@ -1375,7 +1821,7 @@ function load(){
     }
   }catch(e){
     CARD_KEYS.forEach(k=>{S.todos[k]=[];S.notes[k]='';S.projects[k]=JSON.parse(JSON.stringify(DEFAULT_PJS[k]||[]));});
-    BRANCHES.forEach(b=>{S.branchNotes[b]='';S.branchTodos[b]=[];S.branchStaff[b]=[];});
+    BRANCHES.forEach(b=>{S.branchNotes[b]='';S.branchTodos[b]=[];S.branchStaff[b]=DEFAULT_STAFF[b]?JSON.parse(JSON.stringify(DEFAULT_STAFF[b])):[];});
     S.acadChecklist=ACAD_CHECKLIST_DEFAULT.map(t=>({txt:t,done:false,id:Date.now()+Math.random()}));
   }
 }
@@ -2138,31 +2584,104 @@ function renderBranchContent(b){
   document.getElementById('bti').addEventListener('keydown',e=>{if(e.key==='Enter')addBranchTodo();});
 }
 function renderStaffCards(staff){
-  if(!staff.length) return `<div class="no-item">등록된 직원이 없습니다.</div>`;
-  return staff.map((s,i)=>`
-    <div class="staff-card">
+  if(!staff.length) return `<div class="no-item">등록된 직원이 없습니다. + 직원 추가를 눌러 등록하세요.</div>`;
+  const payColor={
+    '정직원(4대보험)':'background:var(--grn-b);color:var(--grn);border:1px solid rgba(90,158,106,.3)',
+    '프리랜서(3.3%)':'background:var(--amb-b);color:var(--amb);border:1px solid rgba(200,146,58,.3)',
+    '인턴(단기)':'background:var(--blu-b);color:var(--blu);border:1px solid rgba(90,142,194,.3)',
+    '아르바이트':'background:rgba(80,80,80,.15);color:var(--muted);border:1px solid rgba(80,80,80,.2)'
+  };
+  return staff.map(s=>`
+    <div class="staff-card" id="sc-${s.id}">
       <div class="staff-hdr" onclick="toggleStaff(${s.id})">
-        <span class="staff-nm">${esc(s.nm)}</span>
-        <span class="staff-role">${esc(s.role)}</span>
-        <span class="badge b-wait" style="font-size:9px">${esc(s.payType||'')}</span>
-        <button class="t-del" onclick="event.stopPropagation();delStaff(${s.id})">×</button>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+            <span class="staff-nm">${esc(s.nm)}</span>
+            ${s.nick&&s.nick!=='매니저'?`<span style="font-size:10.5px;color:var(--muted)">(${esc(s.nick)})</span>`:''}
+            <span class="staff-role">${esc(s.role)}</span>
+          </div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:2px">${s.joinDate||''} 입사</div>
+        </div>
+        <span class="badge" style="${payColor[s.payType]||'background:rgba(80,80,80,.15);color:var(--muted)'};font-size:9px;margin-right:4px">${s.payType==='정직원(4대보험)'?'정직원':s.payType==='프리랜서(3.3%)'?'3.3%':s.payType||''}</span>
+        <button class="t-del" onclick="event.stopPropagation();delStaff(${s.id})" title="삭제">×</button>
       </div>
       <div class="staff-body" id="stf-${s.id}">
-        <div class="info-row"><span class="info-lbl">연락처</span><a class="store-tel" href="tel:${s.tel}">${esc(s.tel||'-')}</a></div>
-        <div class="info-row"><span class="info-lbl">입사일</span><span class="info-val">${esc(s.joinDate||'-')}</span></div>
-        <div class="info-row"><span class="info-lbl">급여형태</span><span class="info-val">${esc(s.payType||'-')}</span></div>
-        <div class="slbl" style="margin-top:10px">상담 이력</div>
-        ${(s.consults||[]).map(c=>`
-          <div class="consult-item">
-            <div class="consult-date">${c.date}</div>
-            <div class="consult-txt">${esc(c.txt)}</div>
-          </div>`).join('')||'<div class="no-item">상담 이력 없음</div>'}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
+          <div>
+            <div class="info-row"><span class="info-lbl">연락처</span><a class="store-tel" href="tel:${s.tel}">${esc(s.tel||'—')}</a></div>
+            <div class="info-row"><span class="info-lbl">예명</span><span class="info-val">${esc(s.nick||'—')}</span></div>
+            <div class="info-row"><span class="info-lbl">입사일</span><span class="info-val">${esc(s.joinDate||'—')}</span></div>
+          </div>
+          <div>
+            <div class="info-row"><span class="info-lbl">역할</span><span class="info-val">${esc(s.role||'—')}</span></div>
+            <div class="info-row"><span class="info-lbl">급여형태</span><span class="info-val" style="font-size:11px">${esc(s.payType||'—')}</span></div>
+            <div class="info-row">
+              <a href="tel:${s.tel}" class="save-btn" style="text-decoration:none;display:inline-block;margin-top:2px">📞 전화</a>
+            </div>
+          </div>
+        </div>
+        <!-- 정보 수정 폼 -->
+        <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+          <button class="save-btn" onclick="toggleEditStaff(${s.id})">✏️ 정보 수정</button>
+        </div>
+        <div class="add-staff-form" id="edit-${s.id}">
+          <div class="form-row">
+            <input class="fi-sm" id="ef-nm-${s.id}" placeholder="이름" value="${esc(s.nm)}">
+            <input class="fi-sm" id="ef-nick-${s.id}" placeholder="예명" value="${esc(s.nick||'')}">
+            <select class="fi-sm" id="ef-role-${s.id}">
+              ${['원장','부원장','디자이너','인턴','실장','매니저'].map(r=>`<option${s.role===r?' selected':''}>${r}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-row">
+            <input class="fi-sm" id="ef-tel-${s.id}" placeholder="연락처" value="${esc(s.tel||'')}" type="tel">
+            <input class="fi-sm" id="ef-join-${s.id}" placeholder="입사일" value="${esc(s.joinDate||'')}">
+            <select class="fi-sm" id="ef-pay-${s.id}">
+              ${['정직원(4대보험)','프리랜서(3.3%)','인턴(단기)','아르바이트'].map(p=>`<option${s.payType===p?' selected':''}>${p}</option>`).join('')}
+            </select>
+          </div>
+          <button class="add-btn" onclick="saveEditStaff(${s.id})">저장</button>
+          <button class="save-btn" onclick="toggleEditStaff(${s.id})" style="margin-left:6px">취소</button>
+        </div>
+        <!-- 상담 이력 -->
+        <div class="slbl" style="margin-top:10px">💬 상담·면담 이력 (${(s.consults||[]).length}건)</div>
+        <div id="cl-${s.id}">
+          ${(s.consults||[]).length?(s.consults||[]).map(c=>`
+            <div class="consult-item" style="position:relative">
+              <div class="consult-date">${c.date}</div>
+              <div class="consult-txt">${esc(c.txt)}</div>
+              <button class="t-del" onclick="delConsultStaff(${s.id},${c.id})" style="position:absolute;right:4px;top:4px">×</button>
+            </div>`).join(''):'<div style="font-size:11.5px;color:var(--muted);padding:6px 0">상담 이력 없음</div>'}
+        </div>
         <div class="todo-add" style="margin-top:8px">
-          <input class="fi-sm" id="cs-${s.id}" placeholder="상담 내용 기록...">
+          <input class="fi-sm" id="cs-${s.id}" placeholder="상담·면담 내용 기록...">
           <button class="add-btn" style="font-size:11px;padding:6px 10px" onclick="addConsult(${s.id})">기록</button>
         </div>
       </div>
     </div>`).join('');
+}
+
+function toggleEditStaff(id){
+  document.getElementById('edit-'+id)?.classList.toggle('on');
+}
+
+function saveEditStaff(id){
+  const s=S.branchStaff[curBranch]?.find(x=>x.id===id);if(!s)return;
+  s.nm   =document.getElementById('ef-nm-'+id)?.value.trim()||s.nm;
+  s.nick =document.getElementById('ef-nick-'+id)?.value.trim()||s.nick;
+  s.role =document.getElementById('ef-role-'+id)?.value||s.role;
+  s.tel  =document.getElementById('ef-tel-'+id)?.value.trim()||s.tel;
+  s.joinDate=document.getElementById('ef-join-'+id)?.value.trim()||s.joinDate;
+  s.payType=document.getElementById('ef-pay-'+id)?.value||s.payType;
+  save();
+  document.getElementById('staff-list').innerHTML=renderStaffCards(S.branchStaff[curBranch]);
+  toast(`${s.nm} 정보 수정 완료`);
+}
+
+function delConsultStaff(staffId,consultId){
+  const s=S.branchStaff[curBranch]?.find(x=>x.id===staffId);if(!s)return;
+  s.consults=(s.consults||[]).filter(c=>c.id!==consultId);
+  save();
+  document.getElementById('staff-list').innerHTML=renderStaffCards(S.branchStaff[curBranch]);
 }
 function toggleStaff(id){
   const el=document.getElementById('stf-'+id);if(el)el.classList.toggle('on');
