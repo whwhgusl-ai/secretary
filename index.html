@@ -822,6 +822,139 @@ const S={
   events:[],ddays:[],contacts:[],archive:[],
   acadChecklist:[]
 };
+/* ══════════════════════════════════════════
+   구글시트 연동
+══════════════════════════════════════════ */
+const GAS_URL='https://script.google.com/macros/s/AKfycbw7cRfcWsJCPRmFilhBn31nnFEbei2RxA0f_c_QQ2HSYWq5DLfeWyMMTus_plP2yDo5Qw/exec';
+
+// GAS POST 요청
+async function gasPost(action,data){
+  try{
+    const res=await fetch(GAS_URL,{
+      method:'POST',
+      body:JSON.stringify({action,data})
+    });
+    return await res.json();
+  }catch(e){
+    console.warn('GAS POST 실패:',e);
+    return {ok:false,error:e.message};
+  }
+}
+
+// GAS GET 요청
+async function gasGet(params){
+  try{
+    const qs=new URLSearchParams(params).toString();
+    const res=await fetch(GAS_URL+'?'+qs);
+    return await res.json();
+  }catch(e){
+    console.warn('GAS GET 실패:',e);
+    return {ok:false,error:e.message};
+  }
+}
+
+// 구글시트 → S 로드 (앱 시작 시)
+async function loadFromSheet(){
+  try{
+    showSyncStatus('구글시트 연결 중...');
+    const res=await gasGet({action:'getAll'});
+    if(!res.ok) throw new Error(res.error);
+    const d=res.data;
+
+    // 할일
+    if(d.todos&&d.todos.length){
+      CARD_KEYS.forEach(k=>{ S.todos[k]=[]; });
+      d.todos.forEach(t=>{
+        if(!S.todos[t.domain]) S.todos[t.domain]=[];
+        S.todos[t.domain].push({
+          id:Number(t.id),txt:t.txt,
+          pri:t.pri||'any',done:t.done==='TRUE'||t.done===true
+        });
+      });
+    }
+
+    // 프로젝트
+    if(d.projects&&d.projects.length){
+      CARD_KEYS.forEach(k=>{ S.projects[k]=[]; });
+      d.projects.forEach(p=>{
+        if(!S.projects[p.domain]) S.projects[p.domain]=[];
+        S.projects[p.domain].push({nm:p.nm,nx:p.nx,st:p.st});
+      });
+      // 프로젝트가 빈 도메인은 기본값 유지
+      CARD_KEYS.forEach(k=>{
+        if(!S.projects[k]||!S.projects[k].length){
+          S.projects[k]=JSON.parse(JSON.stringify(DEFAULT_PJS[k]||[]));
+        }
+      });
+    }
+
+    // 일정
+    if(d.events&&d.events.length){
+      S.events=d.events.map(e=>({
+        id:Number(e.id),date:e.date,time:e.time,txt:e.txt,tag:e.tag
+      }));
+    }
+
+    // 메모
+    if(d.notes&&d.notes.length){
+      d.notes.forEach(n=>{ if(n.domain) S.notes[n.domain]=n.content||''; });
+    }
+
+    // 연락처
+    if(d.contacts&&d.contacts.length){
+      S.contacts=d.contacts.map(c=>({
+        id:Number(c.id),nm:c.nm,role:c.role,tel:c.tel
+      }));
+    }
+
+    // D-day
+    if(d.ddays&&d.ddays.length){
+      S.ddays=d.ddays.map(dd=>({id:Number(dd.id),nm:dd.nm,date:dd.date}));
+    }
+
+    // 지점메모
+    if(d.branches&&d.branches.length){
+      d.branches.forEach(b=>{ if(b.branch) S.branchNotes[b.branch]=b.content||''; });
+    }
+
+    // 오늘 초점
+    if(d.focus&&d.focus.content) S.focus=d.focus.content;
+
+    // 완료보관함
+    if(d.archive&&d.archive.length){
+      S.archive=d.archive.map(a=>({
+        id:Number(a.id),txt:a.txt,domain:a.domain,date:a.date
+      }));
+    }
+
+    save(); // localStorage에도 백업
+    hideSyncStatus();
+    refreshMain();
+    renderFocus();
+    toast('✓ 구글시트 동기화 완료');
+  }catch(e){
+    hideSyncStatus();
+    console.warn('시트 로드 실패, localStorage 사용:', e);
+    toast('오프라인 모드 — 로컬 데이터 사용');
+  }
+}
+
+// 동기화 상태 표시
+function showSyncStatus(msg){
+  let el=document.getElementById('sync-status');
+  if(!el){
+    el=document.createElement('div');
+    el.id='sync-status';
+    el.style.cssText='position:fixed;top:0;left:0;right:0;background:rgba(212,172,61,.15);color:var(--gold);font-size:11px;text-align:center;padding:4px;z-index:500;border-bottom:1px solid rgba(212,172,61,.3)';
+    document.body.prepend(el);
+  }
+  el.textContent=msg;el.style.display='block';
+}
+function hideSyncStatus(){
+  const el=document.getElementById('sync-status');
+  if(el) el.style.display='none';
+}
+
 function save(){try{localStorage.setItem('secretary_v1',JSON.stringify(S));}catch(e){}}
 function load(){
   try{
@@ -869,6 +1002,7 @@ function saveFocus(){
   document.getElementById('fi').style.display='none';
   const v=document.getElementById('fv');
   v.textContent=S.focus||'클릭해서 오늘의 초점 입력';v.style.display='block';save();
+  gasPost('saveFocus',{content:S.focus});
 }
 function renderFocus(){document.getElementById('fv').textContent=S.focus||'클릭해서 오늘의 초점 입력';}
 
@@ -955,7 +1089,10 @@ function confirmTask(){
     pri:priMap[lastClassified.priority]||'any',
     id:Date.now()
   });
+  const newId=Date.now();
+  S.todos[k][0].id=newId;
   save();closeClfBox();updateCardStats(k);
+  gasPost('addTodo',{id:newId,domain:k,txt:lastClassified.text,pri:priMap[lastClassified.priority]||'any',done:false});
   toast(`✓ [${CARD_INFO[k]?.title||k}] 탭에 추가됨`);
 }
 
@@ -964,8 +1101,10 @@ function addTodoCur(){
   const ti=document.getElementById('ti-det');
   const txt=ti.value.trim();if(!txt||!curKey)return;
   const pri=document.getElementById('pri-det').value;
-  S.todos[curKey].unshift({txt,done:false,pri,id:Date.now()});
+  const newId=Date.now();
+  S.todos[curKey].unshift({txt,done:false,pri,id:newId});
   ti.value='';save();renderDetTodos();updateCardStats(curKey);
+  gasPost('addTodo',{id:newId,domain:curKey,txt,pri,done:false});
 }
 function toggleTodo(id){
   const t=S.todos[curKey].find(x=>x.id===id);
@@ -976,10 +1115,13 @@ function toggleTodo(id){
     if(S.archive.length>200) S.archive=S.archive.slice(0,200);
   }
   t.done=!t.done;save();renderDetTodos();updateCardStats(curKey);
+  if(t.done) gasPost('addArchive',{id:Date.now(),txt:t.txt,domain:curKey,date:new Date().toLocaleDateString('ko-KR')});
+  gasPost('updateTodo',{id:t.id,done:t.done});
 }
 function delTodo(id){
   S.todos[curKey]=S.todos[curKey].filter(x=>x.id!==id);
   save();renderDetTodos();updateCardStats(curKey);
+  gasPost('deleteTodo',{id});
 }
 function renderDetTodos(){
   const el=document.getElementById('tl-det');if(!el)return;
@@ -1004,6 +1146,7 @@ function renderDetTodos(){
 function changeSt(i,v){
   S.projects[curKey][i].st=v;save();renderDetProjects();updateCardStats(curKey);
   toast('상태: '+ST_BADGE[v][1]);
+  gasPost('syncProjects',S.projects);
 }
 function renderDetProjects(){
   const el=document.getElementById('pj-det');if(!el)return;
@@ -1026,7 +1169,7 @@ function renderDetProjects(){
 
 /* ── notes ── */
 function renderDetNote(){const el=document.getElementById('note-det');if(el)el.value=S.notes[curKey]||'';}
-function saveNoteCur(){S.notes[curKey]=document.getElementById('note-det').value;save();toast('메모 저장 ✓');}
+function saveNoteCur(){S.notes[curKey]=document.getElementById('note-det').value;save();toast('메모 저장 ✓');gasPost('saveNote',{domain:curKey,content:S.notes[curKey]});}
 
 /* ── branches (430헤어) ── */
 function switchBranch(b){
@@ -1075,6 +1218,7 @@ function delBranchTodo(id){
 function saveBranchNote(){
   S.branchNotes[curBranch]=document.getElementById('bnote').value;
   save();toast(`${curBranch}점 메모 저장 ✓`);
+  gasPost('saveBranch',{branch:curBranch,content:S.branchNotes[curBranch]});
 }
 
 /* ── academy checklist ── */
@@ -1095,10 +1239,13 @@ function addDday(){
   if(!nm||!dt){toast('이름과 날짜를 입력하세요');return;}
   S.ddays.push({nm,date:dt,id:Date.now()});
   S.ddays.sort((a,b)=>a.date.localeCompare(b.date));
-  document.getElementById('dd-nm').value='';save();renderDdays();refreshMain();
+  document.getElementById('dd-nm').value='';
+  const ddId=S.ddays[S.ddays.findIndex(d=>d.nm===nm&&d.date===dt)].id;
+  save();renderDdays();refreshMain();
+  gasPost('addDday',{id:ddId,nm,date:dt});
 }
 function ddayN(dt){const t=new Date();t.setHours(0,0,0,0);return Math.round((new Date(dt+'T00:00:00')-t)/86400000);}
-function delDday(id){S.ddays=S.ddays.filter(x=>x.id!==id);save();renderDdays();refreshMain();}
+function delDday(id){S.ddays=S.ddays.filter(x=>x.id!==id);save();renderDdays();refreshMain();gasPost('deleteDday',{id});}
 function renderDdays(){
   const el=document.getElementById('dday-list');if(!el)return;
   if(!S.ddays.length){el.innerHTML=`<div class="no-item">기념일·D-day를 추가해 보세요!</div>`;return;}
@@ -1124,10 +1271,12 @@ function addEvent(){
   if(!dt||!tx){toast('날짜와 내용을 입력하세요');return;}
   S.events.push({date:dt,time:tm,txt:tx,tag:tg,id:Date.now()});
   S.events.sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||''));
+  const evId=S.events[S.events.length-1]?.id||Date.now();
   document.getElementById('ev-tx').value='';document.getElementById('ev-tm').value='';
   save();renderEvents();refreshMain();
+  gasPost('addEvent',{id:evId,date:dt,time:tm,txt:tx,tag:tg});
 }
-function delEvent(id){S.events=S.events.filter(x=>x.id!==id);save();renderEvents();refreshMain();}
+function delEvent(id){S.events=S.events.filter(x=>x.id!==id);save();renderEvents();refreshMain();gasPost('deleteEvent',{id});}
 function renderEvents(){
   const el=document.getElementById('ev-list');if(!el)return;
   if(!S.events.length){el.innerHTML=`<div class="no-item">등록된 일정이 없습니다</div>`;return;}
@@ -1156,9 +1305,11 @@ function addContact(){
   if(!nm){toast('이름을 입력하세요');return;}
   S.contacts.push({nm,role,tel,id:Date.now()});
   document.getElementById('ct-nm').value='';document.getElementById('ct-role').value='';document.getElementById('ct-tel').value='';
+  const ctId=S.contacts[S.contacts.length-1]?.id||Date.now();
   save();renderContacts();toast('연락처 추가 ✓');
+  gasPost('addContact',{id:ctId,nm,role,tel});
 }
-function delContact(id){S.contacts=S.contacts.filter(x=>x.id!==id);save();renderContacts();}
+function delContact(id){S.contacts=S.contacts.filter(x=>x.id!==id);save();renderContacts();gasPost('deleteContact',{id});}
 function renderContacts(){
   const el=document.getElementById('contact-list');if(!el)return;
   if(!S.contacts.length){el.innerHTML=`<div class="no-item">추가된 연락처가 없습니다.</div>`;return;}
@@ -1217,6 +1368,8 @@ function refreshMain(){
 
 /* ── init ── */
 load();renderFocus();
+// 구글시트에서 최신 데이터 로드 (비동기)
+loadFromSheet();
 document.getElementById('ev-dt').value=new Date().toISOString().slice(0,10);
 bnav_btns=[...document.querySelectorAll('.bnav button')];
 refreshMain();
