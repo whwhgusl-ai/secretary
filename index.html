@@ -425,7 +425,30 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',system-ui,
 .rmodal-b{padding:14px 16px;}
 .rmrow{display:flex;gap:8px;margin-bottom:8px;align-items:flex-start;}
 .rmlbl{min-width:80px;font-size:10.5px;font-weight:700;color:#1A3C2E;padding-top:7px;flex-shrink:0;}
+
+/* ── 구글 캘린더 연동 ── */
+.cal-sync-bar{
+  display:flex;align-items:center;gap:10px;padding:7px 18px;
+  background:rgba(90,158,106,.08);border-bottom:1px solid rgba(90,158,106,.2);
+  font-size:11.5px;
+}
+.cal-sync-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none;}
+.cal-sync-dot.connected{background:var(--grn);}
+.cal-sync-dot.syncing{background:var(--gold);animation:pulse .8s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.cal-sync-txt{color:var(--text2);flex:1;}
+.cal-sync-btn{background:none;border:1px solid var(--line);border-radius:var(--r2);
+  color:var(--text2);font-size:11px;padding:4px 10px;cursor:pointer;}
+.cal-sync-btn:hover{border-color:var(--gold);color:var(--gold);}
+.gcal-evt{display:flex;align-items:flex-start;gap:8px;padding:6px 0;
+  border-bottom:1px solid var(--line2);}
+.gcal-evt:last-child{border-bottom:none;}
+.gcal-time{font-size:11px;color:var(--gold);min-width:44px;flex:none;font-variant-numeric:tabular-nums;}
+.gcal-title{font-size:12.5px;flex:1;}
+.gcal-cal{font-size:10px;padding:1px 6px;border-radius:99px;flex:none;}
 </style>
+<script src="https://apis.google.com/js/api.js"></script>
+<script src="https://accounts.google.com/gsi/client"></script>
 </head>
 <body>
 
@@ -444,6 +467,15 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',system-ui,
   <span class="focus-lbl">TODAY</span>
   <span class="focus-view" id="fv" onclick="editFocus()">클릭해서 오늘의 초점 입력</span>
   <input class="focus-inp" id="fi" onblur="saveFocus()" onkeydown="if(event.key==='Enter')saveFocus()">
+</div>
+
+<!-- 구글 캘린더 연동 상태 바 -->
+<div class="cal-sync-bar" id="cal-sync-bar">
+  <div class="cal-sync-dot" id="cal-dot"></div>
+  <span class="cal-sync-txt" id="cal-sync-txt">구글 캘린더 연결 안 됨</span>
+  <button class="cal-sync-btn" id="cal-auth-btn" onclick="calAuth()">캘린더 연결</button>
+  <button class="cal-sync-btn" id="cal-sync-btn" onclick="calSync()" style="display:none">🔄 동기화</button>
+  <button class="cal-sync-btn" id="cal-sign-out-btn" onclick="calSignOut()" style="display:none">연결 해제</button>
 </div>
 
 <div class="qmemo">
@@ -833,7 +865,15 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',system-ui,
     <button class="back" onclick="goMain()">← 메인</button>
     <div class="det-info"><div class="dt" style="color:var(--gold)">📅 일정 관리</div></div>
   </div>
-  <div class="slbl">일정 추가</div>
+  <!-- 구글 캘린더 연동 이벤트 -->
+  <div id="gcal-section" style="display:none">
+    <div class="slbl">구글 캘린더 일정</div>
+    <div id="gcal-events-list">
+      <div class="no-item">구글 캘린더를 연결하면 일정이 자동으로 표시됩니다.</div>
+    </div>
+  </div>
+
+  <div class="slbl">일정 직접 추가</div>
   <div class="cal-row">
     <input class="cal-inp" id="ev-dt" type="date" style="width:130px">
     <input class="cal-inp" id="ev-tm" type="time" style="width:84px">
@@ -845,6 +885,7 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',system-ui,
       <option value="family">가족</option><option value="infra">개인</option>
     </select>
     <button class="add-btn" onclick="addEvent()">추가</button>
+    <button class="add-btn" id="gcal-add-btn" onclick="addEventToGCal()" style="background:var(--bg3);color:var(--gold);border:1px solid var(--gold-dim);display:none" title="구글 캘린더에도 등록">📅+</button>
   </div>
   <div id="ev-list"></div>
 </div>
@@ -2338,6 +2379,265 @@ function refreshMain(){
   }).join('');}
   CARD_KEYS.forEach(updateCardStats);
 }
+
+
+/* ══════════════════════════════════════════
+   구글 캘린더 양방향 연동
+   Client ID: 500264181856-074g87nbqj2kulfpbehhi55d1ocps68t.apps.googleusercontent.com
+══════════════════════════════════════════ */
+const GCAL_CLIENT_ID = '500264181856-074g87nbqj2kulfpbehhi55d1ocps68t.apps.googleusercontent.com';
+const GCAL_SCOPES    = 'https://www.googleapis.com/auth/calendar';
+const GCAL_ID        = 'primary'; // 기본 캘린더
+
+let gcalTokenClient = null;
+let gcalAccessToken = null;
+let gcalConnected   = false;
+
+/* ── 초기화 ── */
+function initGCal() {
+  try {
+    // Google Identity Services 로드
+    gcalTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GCAL_CLIENT_ID,
+      scope: GCAL_SCOPES,
+      callback: (resp) => {
+        if (resp.error) { gcalSetStatus(false, '연결 실패: ' + resp.error); return; }
+        gcalAccessToken = resp.access_token;
+        gcalConnected   = true;
+        // 토큰 로컬 저장 (세션용)
+        try { sessionStorage.setItem('gcal_token', resp.access_token); } catch(e) {}
+        gcalSetStatus(true, '구글 캘린더 연결됨');
+        calSync();
+      },
+    });
+    // 세션에 토큰 있으면 바로 복원
+    const saved = sessionStorage.getItem('gcal_token');
+    if (saved) {
+      gcalAccessToken = saved;
+      gcalConnected   = true;
+      gcalSetStatus(true, '구글 캘린더 연결됨');
+      calSync();
+    }
+  } catch(e) {
+    console.warn('Google API 로드 실패 (오프라인 환경):', e.message);
+  }
+}
+
+/* ── 연결 상태 UI ── */
+function gcalSetStatus(connected, msg) {
+  const dot  = document.getElementById('cal-dot');
+  const txt  = document.getElementById('cal-sync-txt');
+  const auth = document.getElementById('cal-auth-btn');
+  const sync = document.getElementById('cal-sync-btn');
+  const out  = document.getElementById('cal-sign-out-btn');
+  const addB = document.getElementById('gcal-add-btn');
+  const sec  = document.getElementById('gcal-section');
+
+  if (!dot) return;
+  dot.className  = 'cal-sync-dot' + (connected ? ' connected' : '');
+  txt.textContent = msg;
+  auth.style.display = connected ? 'none' : 'block';
+  sync.style.display = connected ? 'block' : 'none';
+  out.style.display  = connected ? 'block' : 'none';
+  if (addB) addB.style.display = connected ? 'inline-block' : 'none';
+  if (sec)  sec.style.display  = connected ? 'block' : 'none';
+}
+
+/* ── 캘린더 연결 (OAuth) ── */
+function calAuth() {
+  if (!gcalTokenClient) {
+    toast('구글 API를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.');
+    return;
+  }
+  gcalTokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+/* ── 연결 해제 ── */
+function calSignOut() {
+  if (gcalAccessToken) {
+    google.accounts.oauth2.revoke(gcalAccessToken, () => {});
+    gcalAccessToken = null;
+    gcalConnected   = false;
+  }
+  try { sessionStorage.removeItem('gcal_token'); } catch(e) {}
+  gcalSetStatus(false, '구글 캘린더 연결 안 됨');
+  document.getElementById('gcal-events-list').innerHTML =
+    '<div class="no-item">구글 캘린더를 연결하면 일정이 자동으로 표시됩니다.</div>';
+  toast('캘린더 연결 해제됨');
+}
+
+/* ── 캘린더 읽기 (동기화) ── */
+async function calSync() {
+  if (!gcalAccessToken) return;
+  const dot = document.getElementById('cal-dot');
+  if (dot) { dot.className = 'cal-sync-dot syncing'; }
+  document.getElementById('cal-sync-txt').textContent = '동기화 중...';
+
+  try {
+    // 오늘 ~ 30일 후까지 일정 가져오기
+    const now    = new Date();
+    const after  = now.toISOString();
+    const before = new Date(now.getTime() + 30 * 86400000).toISOString();
+
+    const res = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GCAL_ID)}/events?` +
+      `timeMin=${encodeURIComponent(after)}&timeMax=${encodeURIComponent(before)}` +
+      `&singleEvents=true&orderBy=startTime&maxResults=50`,
+      { headers: { Authorization: 'Bearer ' + gcalAccessToken } }
+    );
+
+    if (res.status === 401) {
+      // 토큰 만료 → 재연결
+      gcalConnected = false; gcalAccessToken = null;
+      try { sessionStorage.removeItem('gcal_token'); } catch(e) {}
+      gcalSetStatus(false, '세션 만료 — 다시 연결하세요');
+      return;
+    }
+
+    const data   = await res.json();
+    const events = data.items || [];
+
+    renderGCalEvents(events);
+    renderGCalTodayPreview(events);
+    gcalSetStatus(true, `구글 캘린더 연결됨 · ${events.length}개 일정`);
+
+  } catch(e) {
+    console.warn('캘린더 동기화 실패:', e);
+    gcalSetStatus(true, '동기화 실패 — 재시도 필요');
+  }
+}
+
+/* ── 구글 캘린더 이벤트 목록 렌더링 ── */
+function renderGCalEvents(events) {
+  const el = document.getElementById('gcal-events-list');
+  if (!el) return;
+  if (!events.length) {
+    el.innerHTML = '<div class="no-item">향후 30일 내 일정이 없습니다.</div>';
+    return;
+  }
+
+  let html = '', lastDate = '';
+  events.forEach(ev => {
+    const start   = ev.start?.dateTime || ev.start?.date || '';
+    const isAllDay = !ev.start?.dateTime;
+    const date    = start.slice(0, 10);
+    const time    = isAllDay ? '종일' : new Date(start).toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit', hour12:false});
+    const d       = new Date(date + 'T12:00:00');
+    const wd      = ['일','월','화','수','목','금','토'];
+
+    if (date !== lastDate) {
+      const today   = new Date().toISOString().slice(0,10);
+      const isToday = date === today;
+      html += `<div class="slbl" style="${isToday?'color:var(--gold)':''}">${date.replace(/-/g,'.')} (${wd[d.getDay()]})${isToday?' · 오늘':''}</div>`;
+      lastDate = date;
+    }
+
+    const color = ev.colorId ? `hsl(${parseInt(ev.colorId)*30},60%,55%)` : 'var(--grn)';
+    html += `<div class="gcal-evt">
+      <span class="gcal-time">${time}</span>
+      <span class="gcal-title">${esc(ev.summary || '(제목 없음)')}</span>
+      ${ev.location ? `<span style="font-size:10px;color:var(--muted)">📍${esc(ev.location.slice(0,20))}</span>` : ''}
+      <span class="gcal-cal" style="background:${color}22;color:${color};border:1px solid ${color}44">구글</span>
+    </div>`;
+  });
+
+  el.innerHTML = html;
+}
+
+/* ── 메인 오늘 화면에 구글 캘린더 일정 반영 ── */
+function renderGCalTodayPreview(events) {
+  const today     = new Date().toISOString().slice(0, 10);
+  const todayEvts = events.filter(ev => {
+    const start = ev.start?.dateTime || ev.start?.date || '';
+    return start.slice(0, 10) === today;
+  });
+
+  if (!todayEvts.length) return;
+
+  // 기존 오늘 일정 미리보기에 구글 캘린더 일정 추가
+  const prev = document.getElementById('today-prev');
+  if (!prev) return;
+
+  const gcalHtml = todayEvts.map(ev => {
+    const start   = ev.start?.dateTime || ev.start?.date || '';
+    const isAllDay = !ev.start?.dateTime;
+    const time    = isAllDay ? '종일' : new Date(start).toLocaleTimeString('ko-KR', {hour:'2-digit',minute:'2-digit',hour12:false});
+    return `<div class="evt">
+      <span class="et">${time}</span>
+      <span class="en">${esc(ev.summary || '(제목 없음)')}</span>
+      <span class="ec" style="background:rgba(90,158,106,.15);color:var(--grn);border:1px solid rgba(90,158,106,.3)">구글</span>
+    </div>`;
+  }).join('');
+
+  // 오늘 일정 카운터 업데이트
+  const kToday = document.getElementById('k-today');
+  if (kToday) {
+    const cur = parseInt(kToday.textContent) || 0;
+    kToday.textContent = cur + todayEvts.length;
+  }
+
+  // 기존 "오늘 일정 없음" 메시지 제거하고 구글 일정 추가
+  const noItem = prev.querySelector('.no-item');
+  if (noItem) noItem.remove();
+  prev.innerHTML = gcalHtml + prev.innerHTML;
+}
+
+/* ── 비서실 일정 → 구글 캘린더 등록 ── */
+async function addEventToGCal() {
+  if (!gcalConnected) { toast('먼저 구글 캘린더를 연결하세요'); return; }
+  const dt  = document.getElementById('ev-dt').value;
+  const tm  = document.getElementById('ev-tm').value;
+  const tx  = document.getElementById('ev-tx').value.trim();
+  const tg  = document.getElementById('ev-tg').value;
+  if (!dt || !tx) { toast('날짜와 내용을 입력하세요'); return; }
+
+  const tagLabel = {ieum:'이음컴퍼니',rianhs:'리안지사',h430:'430헤어',academy:'아카데미',
+                   lions:'라이온스',beauty:'미용사회',family:'가족',infra:'개인'};
+
+  const event = {
+    summary:     `[${tagLabel[tg]||tg}] ${tx}`,
+    description: `조현 비서실에서 등록된 일정
+영역: ${tagLabel[tg]||tg}`,
+    start: tm
+      ? { dateTime: `${dt}T${tm}:00+09:00`, timeZone: 'Asia/Seoul' }
+      : { date: dt },
+    end: tm
+      ? { dateTime: `${dt}T${String(parseInt(tm.split(':')[0])+1).padStart(2,'0')}:${tm.split(':')[1]}:00+09:00`, timeZone: 'Asia/Seoul' }
+      : { date: dt },
+    colorId: tg === 'rianhs' ? '2' : tg === 'h430' ? '5' : tg === 'family' ? '6' : '1',
+  };
+
+  try {
+    const res = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GCAL_ID)}/events`,
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + gcalAccessToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify(event),
+      }
+    );
+    if (!res.ok) throw new Error('등록 실패 ' + res.status);
+    toast('✅ 구글 캘린더에도 등록됨');
+    // 비서실 로컬에도 등록
+    addEvent();
+    // 동기화
+    setTimeout(calSync, 1000);
+  } catch(e) {
+    toast('❌ 구글 캘린더 등록 실패: ' + e.message);
+  }
+}
+
+/* ── GAPI 로드 후 초기화 ── */
+function gapiLoaded() {
+  // gapi는 Calendar list 읽기에만 사용 (선택사항)
+}
+// Google Identity Services가 로드되면 자동 초기화
+window.addEventListener('load', () => {
+  // 약간의 지연 후 초기화 (스크립트 로드 대기)
+  setTimeout(() => {
+    try { initGCal(); } catch(e) { console.warn('GCal 초기화 실패:', e.message); }
+  }, 1500);
+});
 
 /* ── init ── */
 load();renderFocus();
