@@ -1759,6 +1759,33 @@ async function loadFromSheet(){
     // 오늘 초점
     if(d.focus&&d.focus.content) S.focus=d.focus.content;
 
+    // 직원 데이터
+    if(d.staff&&d.staff.length){
+      // 지점별로 분류
+      const staffByBranch={};
+      d.staff.forEach(s=>{
+        const b=s.branch||'';
+        if(!staffByBranch[b]) staffByBranch[b]=[];
+        staffByBranch[b].push({
+          id:Number(s.id)||Date.now(),
+          nm:s.nm||'',nick:s.nick||'',role:s.role||'디자이너',
+          tel:s.tel||'',joinDate:s.joinDate||'',payType:s.payType||'프리랜서(3.3%)',
+          consults:[]
+        });
+      });
+      // 상담이력 매핑
+      if(d.staffLog&&d.staffLog.length){
+        d.staffLog.forEach(log=>{
+          const branch=log.branch||'';
+          const staff=(staffByBranch[branch]||[]).find(s=>String(s.id)===String(log.staffId));
+          if(staff) staff.consults.push({id:Number(log.id),txt:log.txt||'',date:log.date||''});
+        });
+      }
+      BRANCHES.forEach(b=>{
+        if(staffByBranch[b]&&staffByBranch[b].length) S.branchStaff[b]=staffByBranch[b];
+      });
+    }
+
     // 완료보관함
     if(d.archive&&d.archive.length){
       S.archive=d.archive.map(a=>({
@@ -2675,6 +2702,7 @@ function saveEditStaff(id){
   save();
   document.getElementById('staff-list').innerHTML=renderStaffCards(S.branchStaff[curBranch]);
   toast(`${s.nm} 정보 수정 완료`);
+  gasPost('updateStaff',{...s, branch:curBranch});
 }
 
 function delConsultStaff(staffId,consultId){
@@ -2682,6 +2710,7 @@ function delConsultStaff(staffId,consultId){
   s.consults=(s.consults||[]).filter(c=>c.id!==consultId);
   save();
   document.getElementById('staff-list').innerHTML=renderStaffCards(S.branchStaff[curBranch]);
+  gasPost('deleteStaffLog',{id:consultId});
 }
 function toggleStaff(id){
   const el=document.getElementById('stf-'+id);if(el)el.classList.toggle('on');
@@ -2711,6 +2740,7 @@ function addStaff(){
 function delStaff(id){
   S.branchStaff[curBranch]=S.branchStaff[curBranch].filter(x=>x.id!==id);
   save();document.getElementById('staff-list').innerHTML=renderStaffCards(S.branchStaff[curBranch]);
+  gasPost('deleteStaff',{id, branch:curBranch});
 }
 function addConsult(staffId){
   const inp=document.getElementById('cs-'+staffId);
@@ -2718,10 +2748,13 @@ function addConsult(staffId){
   const staff=S.branchStaff[curBranch]?.find(x=>x.id===staffId);
   if(!staff)return;
   if(!staff.consults) staff.consults=[];
-  staff.consults.unshift({id:Date.now(),txt,date:new Date().toLocaleDateString('ko-KR')});
+  const cId=Date.now();
+  const cDate=new Date().toLocaleDateString('ko-KR');
+  staff.consults.unshift({id:cId,txt,date:cDate});
   inp.value='';save();
   document.getElementById('staff-list').innerHTML=renderStaffCards(S.branchStaff[curBranch]);
   toast('상담 기록 완료');
+  gasPost('addStaffLog',{id:cId, staffId:staffId, branch:curBranch, txt, date:cDate});
 }
 function renderBranchTodos(todos){
   if(!todos.length) return `<div class="no-item">체크 사항이 없습니다.</div>`;
