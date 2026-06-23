@@ -868,7 +868,13 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',system-ui,
   <div class="slbl">일정 직접 추가</div>
   <div class="cal-row">
     <input class="cal-inp" id="ev-dt" type="date" style="width:130px">
-    <input class="cal-inp" id="ev-tm" type="time" style="width:84px">
+    <span style="display:inline-flex;align-items:center;gap:3px">
+      <button type="button" id="ev-ap" class="cal-inp" style="width:46px;cursor:pointer;padding:0" onclick="toggleAP()">오전</button>
+      <input class="cal-inp" id="ev-hh" inputmode="numeric" maxlength="2" placeholder="시" style="width:40px;text-align:center" oninput="syncEvTm()">
+      <span style="color:var(--muted)">:</span>
+      <input class="cal-inp" id="ev-mm" inputmode="numeric" maxlength="2" placeholder="분" style="width:40px;text-align:center" oninput="syncEvTm()">
+    </span>
+    <input type="hidden" id="ev-tm">
     <input class="cal-inp" id="ev-tx" placeholder="내용" style="flex:1;min-width:100px">
     <select class="tag-sel" id="ev-tg">
       <option value="ieum">이음</option><option value="rianhs">리안지사</option>
@@ -2851,11 +2857,23 @@ function addEvent(){
   S.events.push({date:dt,time:tm,txt:tx,tag:tg,id:Date.now()});
   S.events.sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||''));
   const evId=S.events[S.events.length-1]?.id||Date.now();
-  document.getElementById('ev-tx').value='';document.getElementById('ev-tm').value='';
+  document.getElementById('ev-tx').value='';document.getElementById('ev-tm').value='';var _h=document.getElementById('ev-hh');if(_h)_h.value='';var _m=document.getElementById('ev-mm');if(_m)_m.value='';
   save();renderEvents();refreshMain();
   gasPost('addEvent',{id:evId,date:dt,time:tm,txt:tx,tag:tg});
 }
 function addEventBoth(){ if(typeof gcalConnected!=='undefined' && gcalConnected){ addEventToGCal(); } else { addEvent(); } }
+function toggleAP(){ var b=document.getElementById('ev-ap'); if(!b)return; b.textContent=(b.textContent==='오전'?'오후':'오전'); syncEvTm(); }
+function syncEvTm(){
+  var apEl=document.getElementById('ev-ap'), hhEl=document.getElementById('ev-hh'), mmEl=document.getElementById('ev-mm'), hid=document.getElementById('ev-tm');
+  if(!hid) return;
+  var hh=parseInt((hhEl&&hhEl.value)||'',10), mm=parseInt((mmEl&&mmEl.value)||'',10);
+  if(isNaN(hh)){ hid.value=''; return; }           // 시 비우면 종일
+  if(isNaN(mm)) mm=0;
+  hh=hh%12; if((apEl&&apEl.textContent)==='오후') hh+=12;   // 오전12=00, 오후12=12
+  if(mm>59) mm=59;
+  hid.value=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+}
+
 function delEvent(id){S.events=S.events.filter(x=>x.id!==id);save();renderEvents();refreshMain();gasPost('deleteEvent',{id});}
 function toSeoulDate(v){ var s=String(v==null?'':v); if(s==='') return ''; if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; var d=new Date(s); if(isNaN(d.getTime())) return s; return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(d); }
 function fmtTime(v){ var s=String(v==null?'':v); if(s==='') return ''; if(/^\d{1,2}:\d{2}/.test(s)) return s.slice(0,5); var d=new Date(s); if(isNaN(d.getTime())) return s; return new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}).format(d); }
