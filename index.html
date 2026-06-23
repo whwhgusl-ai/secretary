@@ -865,14 +865,6 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',system-ui,
     <button class="back" onclick="goMain()">← 메인</button>
     <div class="det-info"><div class="dt" style="color:var(--gold)">📅 일정 관리</div></div>
   </div>
-  <!-- 구글 캘린더 연동 이벤트 -->
-  <div id="gcal-section" style="display:none">
-    <div class="slbl">구글 캘린더 일정</div>
-    <div id="gcal-events-list">
-      <div class="no-item">구글 캘린더를 연결하면 일정이 자동으로 표시됩니다.</div>
-    </div>
-  </div>
-
   <div class="slbl">일정 직접 추가</div>
   <div class="cal-row">
     <input class="cal-inp" id="ev-dt" type="date" style="width:130px">
@@ -884,9 +876,16 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',system-ui,
       <option value="lions">라이온스</option><option value="beauty">미용사회</option>
       <option value="family">가족</option><option value="infra">개인</option>
     </select>
-    <button class="add-btn" onclick="addEvent()">추가</button>
-    <button class="add-btn" id="gcal-add-btn" onclick="addEventToGCal()" style="background:var(--bg3);color:var(--gold);border:1px solid var(--gold-dim);display:none" title="구글 캘린더에도 등록">📅+</button>
+    <button class="add-btn" onclick="addEventBoth()">추가</button>
   </div>
+  <!-- 구글 캘린더 연동 이벤트 -->
+  <div id="gcal-section" style="display:none">
+    <div class="slbl">구글 캘린더 일정</div>
+    <div id="gcal-events-list">
+      <div class="no-item">구글 캘린더를 연결하면 일정이 자동으로 표시됩니다.</div>
+    </div>
+  </div>
+
   <div id="ev-list"></div>
 </div>
 
@@ -2856,19 +2855,23 @@ function addEvent(){
   save();renderEvents();refreshMain();
   gasPost('addEvent',{id:evId,date:dt,time:tm,txt:tx,tag:tg});
 }
+function addEventBoth(){ if(typeof gcalConnected!=='undefined' && gcalConnected){ addEventToGCal(); } else { addEvent(); } }
 function delEvent(id){S.events=S.events.filter(x=>x.id!==id);save();renderEvents();refreshMain();gasPost('deleteEvent',{id});}
+function toSeoulDate(v){ var s=String(v==null?'':v); if(s==='') return ''; if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; var d=new Date(s); if(isNaN(d.getTime())) return s; return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(d); }
+function fmtTime(v){ var s=String(v==null?'':v); if(s==='') return ''; if(/^\d{1,2}:\d{2}/.test(s)) return s.slice(0,5); var d=new Date(s); if(isNaN(d.getTime())) return s; return new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}).format(d); }
 function renderEvents(){
   const el=document.getElementById('ev-list');if(!el)return;
   if(!S.events.length){el.innerHTML=`<div class="no-item">등록된 일정이 없습니다</div>`;return;}
   let html='',last='';
   S.events.forEach(e=>{
-    if(e.date!==last){
-      const d=new Date(e.date+'T12:00:00'),wd=['일','월','화','수','목','금','토'];
-      html+=`<div class="slbl">${e.date.replace(/-/g,'.')} (${wd[d.getDay()]})</div>`;last=e.date;
+    var _d=toSeoulDate(e.date), _t=fmtTime(e.time);
+    if(_d!==last){
+      const d=new Date(_d+'T12:00:00'),wd=['일','월','화','수','목','금','토'];
+      html+=`<div class="slbl">${_d.replace(/-/g,'.')} (${wd[d.getDay()]})</div>`;last=_d;
     }
     const tc=TAG_COLOR[e.tag]||'var(--muted)';
     html+=`<div class="evt">
-      <span class="et">${e.time||'종일'}</span>
+      <span class="et">${_t||'종일'}</span>
       <span class="en">${esc(e.txt)}</span>
       <span class="ec" style="background:${tc}22;color:${tc};border:1px solid ${tc}44">${TAG_LABEL[e.tag]||''}</span>
       <button class="t-del" onclick="delEvent(${e.id})" style="margin-left:4px">×</button>
@@ -2999,7 +3002,7 @@ function gcalSetStatus(connected, msg) {
   const auth = document.getElementById('cal-auth-btn');
   const sync = document.getElementById('cal-sync-btn');
   const out  = document.getElementById('cal-sign-out-btn');
-  const addB = document.getElementById('gcal-add-btn');
+  const addB = document.getElementById('gcal-add-btn') || {style:{}};
   const sec  = document.getElementById('gcal-section');
 
   if (!dot) return;
