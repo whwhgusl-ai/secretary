@@ -143,6 +143,30 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',system-ui,
   font-size:12px;font-weight:800;padding:7px 12px;cursor:pointer;flex:none;}
 .add-btn:hover{background:var(--gold2);}
 
+
+/* ── 할일 카드 토글(description) ── */
+.todo-item{cursor:pointer;}
+.t-main{display:flex;align-items:center;gap:8px;width:100%;}
+.t-meta{display:flex;align-items:center;gap:6px;flex:1;min-width:0;}
+.t-code{font-size:10px;color:var(--gold);background:rgba(184,151,90,.12);
+  border:1px solid rgba(184,151,90,.3);border-radius:4px;padding:1px 5px;
+  white-space:nowrap;flex:none;}
+.t-memo{font-size:11px;color:var(--muted);flex:1;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;}
+.t-toggle{font-size:11px;color:var(--muted);flex:none;transition:transform .2s;}
+.t-toggle.open{transform:rotate(180deg);}
+.t-desc{display:none;padding:8px 10px 4px;border-top:1px dashed var(--line);
+  margin-top:6px;}
+.t-desc.show{display:block;}
+.t-desc textarea{width:100%;min-height:80px;background:var(--bg3);
+  border:1px solid var(--line);border-radius:var(--r2);color:var(--text);
+  font-size:12px;padding:7px;resize:vertical;font-family:inherit;line-height:1.5;}
+.t-desc textarea:focus{outline:none;border-color:var(--gold);}
+.t-desc-save{margin-top:5px;border:none;background:var(--gold);color:#111;
+  border-radius:var(--r2);padding:4px 12px;font-size:12px;font-weight:700;
+  font-family:inherit;cursor:pointer;}
+.t-desc-label{font-size:10px;color:var(--muted);margin-bottom:4px;}
+
 .todo-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;
   background:var(--bg2);border:1px solid var(--line);border-radius:var(--r2);
   margin-bottom:5px;transition:opacity .18s;}
@@ -1712,7 +1736,9 @@ async function loadFromSheet(){
         if(!S.todos[t.domain]) S.todos[t.domain]=[];
         S.todos[t.domain].push({
           id:Number(t.id),txt:t.txt,
-          pri:t.pri||'any',done:t.done==='TRUE'||t.done===true
+          pri:t.pri||'any',done:t.done==='TRUE'||t.done===true,
+          agentCode:t.agentCode||'',agentLabel:t.agentLabel||'',
+          memo:t.memo||'',description:t.description||''
         });
       });
     }
@@ -2036,13 +2062,31 @@ function renderDetTodos(){
   // 오늘 → 이번주 → 언제든 순
   const order={today:0,week:1,any:2};
   const sorted=[...list].sort((a,b)=>(order[a.pri]||2)-(order[b.pri]||2));
-  el.innerHTML=[...sorted,...done].map(t=>`
-    <div class="todo-item${t.done?' done':''}">
-      <div class="t-cb${t.done?' chk':''}" onclick="toggleTodo(${t.id})"></div>
-      <span class="t-txt">${esc(t.txt)}</span>
-      ${!t.done?`<span class="t-pri pri-${t.pri||'any'}">${PRI_LABEL[t.pri||'any']}</span>`:''}
-      <button class="t-del" onclick="delTodo(${t.id})">×</button>
-    </div>`).join('');
+  el.innerHTML=[...sorted,...done].map(t=>{
+    const code = t.agentCode ? `[${t.agentCode}]` : '';
+    const memo = t.memo || '';
+    const desc = t.description || '';
+    return `
+    <div class="todo-item${t.done?' done':''}" id="ti-${t.id}">
+      <div class="t-main">
+        <div class="t-cb${t.done?' chk':''}" onclick="event.stopPropagation();toggleTodo(${t.id})"></div>
+        <div class="t-meta" onclick="toggleTodoDesc(${t.id})">
+          ${code?`<span class="t-code">${code}</span>`:''}
+          <span class="t-txt">${esc(t.txt)}</span>
+          ${!t.done?`<span class="t-pri pri-${t.pri||'any'}">${PRI_LABEL[t.pri||'any']}</span>`:''}
+          ${memo?`<span class="t-memo">· ${esc(memo)}</span>`:''}
+        </div>
+        <span class="t-toggle" id="tt-${t.id}">▾</span>
+        <button class="t-del" onclick="event.stopPropagation();delTodo(${t.id})">×</button>
+      </div>
+      <div class="t-desc" id="td-${t.id}">
+        <div class="t-desc-label">📎 상세 메모 (원문·회의록·배경)</div>
+        <textarea id="tda-${t.id}" placeholder="원문, 회의록, 배경 설명 등을 붙여넣으세요..."
+          onclick="event.stopPropagation()">${esc(desc)}</textarea>
+        <button class="t-desc-save" onclick="event.stopPropagation();saveTodoDesc(${t.id})">저장</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 /* ── projects ── */
