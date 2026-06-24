@@ -1837,7 +1837,7 @@ function load(){
     if(d.archive)  S.archive=d.archive;
     if(d.acadChecklist) S.acadChecklist=d.acadChecklist;
     CARD_KEYS.forEach(k=>{
-      S.todos[k]    =d.todos?.[k]    ||[];
+      S.todos[k] = (d.todos?.[k]||[]).map(t=>({...t,description:t.description||'',agentCode:t.agentCode||'',agentLabel:t.agentLabel||'',memo:t.memo||''}));
       S.notes[k]    =d.notes?.[k]    ||'';
       S.projects[k] =d.projects?.[k] ||JSON.parse(JSON.stringify(DEFAULT_PJS[k]||[]));
     });
@@ -1957,6 +1957,12 @@ let lastClassified=null;
 function handleQuickMemo(){
   const inp=document.getElementById('qmi');
   const txt=inp.value.trim();if(!txt)return;
+  /* ✂️ 블록 감지: [숫자숫자] 로 시작하는 줄이 있으면 일괄처리 */
+  if(/^\[\d{2}[.\]]/m.test(txt)){
+    inp.value='';
+    bulkAddFromClip(txt);
+    return;
+  }
   lastClassified={text:txt,...classifyTask(txt)};
   const box=document.getElementById('clf-box');
   const PRI_KR={urgent:'🔴 긴급',high:'🟡 높음',normal:'⚪ 보통',low:'🔵 낮음'};
@@ -2007,7 +2013,12 @@ function toggleTodo(id){
     if(S.archive.length>200) S.archive=S.archive.slice(0,200);
   }
   t.done=!t.done;save();renderDetTodos();updateCardStats(curKey);
-  if(t.done) gasPost('addArchive',{id:Date.now(),txt:t.txt,domain:curKey,date:new Date().toLocaleDateString('ko-KR')});
+  if(t.done) (function(){
+    const resultMemo = prompt('완료 결과를 한 줄로 남겨주세요 (건너뛰려면 취소/빈칸)') || '';
+    gasPost('addArchive',{id:Date.now(),txt:t.txt,domain:curKey,
+      date:new Date().toLocaleDateString('ko-KR'),
+      agentCode:t.agentCode||'',memo:t.memo||'',result:resultMemo});
+  })();
   gasPost('updateTodo',{id:t.id,done:t.done});
 }
 function delTodo(id){
@@ -2861,6 +2872,100 @@ function addEvent(){
   save();renderEvents();refreshMain();
   gasPost('addEvent',{id:evId,date:dt,time:tm,txt:tx,tag:tg});
 }
+
+/* ══════════════════════════════════════════
+   ✂️ 블록 파서 & 일괄 자동분류
+══════════════════════════════════════════ */
+function parseClipBlock(raw) {
+  const PRI_MAP = {'🔴':'today','오늘':'today','today':'today',
+                   '🟡':'week','이번주':'week','week':'week',
+                   '⚪':'any','언제든':'any','any':'any'};
+  const AGENT_CODE_MAP_LOCAL = {
+    '00':{key:'ieum',   label:'비서실장'},
+    '01':{key:'ieum',   label:'총괄비서'},
+    '02':{key:'rianhs', label:'리안지사PM'},
+    '03':{key:'h430',   label:'430헤어운영'},
+    '04':{key:'ieum',   label:'콘텐츠/B2B프로덕트'},
+    '05':{key:'rianhs', label:'계약문서'},
+    '06':{key:'lions',  label:'모임비서'},
+    '07':{key:'lions',  label:'미용사회'},
+    '08':{key:'academy',label:'본투비아카데미'},
+    '09':{key:'infra',  label:'IT인프라'},
+    '10':{key:'family', label:'가족라이프'},
+    '11':{key:'ieum',   label:'COO'},
+  };
+  const lines = raw.split(/\n/).map(l=>l.trim()).filter(l=>l);
+  const results = [];
+  for (const line of lines) {
+    const m = line.match(/^\[(\d{2})(?:\.[^\]]+)?\]\s*(.+)/);
+    if (!m) continue;
+    const code = m[1];
+    const rest = m[2];
+    const ag = AGENT_CODE_MAP_LOCAL[code];
+    if (!ag) continue;
+    const parts = rest.split('||');
+    const main  = parts[0].trim();
+    const memo  = parts[1] ? parts[1].trim() : '';
+    let pri = 'any';
+    const priMatch = main.match(/\(([^)]+)\)$/);
+    if (priMatch) {
+      const raw2 = priMatch[1].trim();
+      for (const [k,v] of Object.entries(PRI_MAP)) {
+        if (raw2.includes(k)) { pri = v; break; }
+      }
+    }
+    const txt = main.replace(/\s*\([^)]+\)\s*$/, '').trim();
+    results.push({agentCode:code, agentLabel:ag.label, domainKey:ag.key, txt, pri, memo});
+  }
+  return results;
+}
+
+async function bulkAddFromClip(raw) {
+  const items = parseClipBlock(raw);
+  if (!items.length) {
+    toast('✂️ 블록 형식을 인식하지 못했습니다. [02.이름] 할일 (🔴 오늘) || 참고 형식을 확인하세요.');
+    return;
+  }
+  let added = 0;
+  for (const it of items) {
+    const k = it.domainKey;
+    if (!S.todos[k]) S.todos[k] = [];
+    const id = Date.now() + added;
+    const todo = {id, txt:it.txt, done:false, pri:it.pri,
+                  agentCode:it.agentCode, agentLabel:it.agentLabel,
+                  memo:it.memo, description:''};
+    S.todos[k].unshift(todo);
+    updateCardStats(k);
+    await gasPost('addTodo', {id, domain:k, txt:it.txt, pri:it.pri, done:false,
+                               agentCode:it.agentCode, agentLabel:it.agentLabel,
+                               memo:it.memo, description:'', source:'clip_block'});
+    added++;
+  }
+  save(); refreshMain();
+  toast(`✅ ${added}건 자동 분류 완료 — 각 카드를 확인하세요`);
+}
+
+/* ── 할일 카드 토글 & description 저장 ── */
+function toggleTodoDesc(id){
+  const desc = document.getElementById('td-'+id);
+  const tog  = document.getElementById('tt-'+id);
+  if(!desc) return;
+  desc.classList.toggle('show');
+  if(tog) tog.classList.toggle('open');
+}
+function saveTodoDesc(id){
+  const ta = document.getElementById('tda-'+id);
+  if(!ta) return;
+  const desc = ta.value;
+  const todo = (S.todos[curKey]||[]).find(t=>t.id===id);
+  if(todo){
+    todo.description = desc;
+    save();
+    gasPost('updateTodoDesc',{id, description:desc});
+    toast('📎 상세 메모가 저장됐습니다');
+  }
+}
+
 function addEventBoth(){ if(typeof gcalConnected!=='undefined' && gcalConnected){ addEventToGCal(); } else { addEvent(); } }
 function toggleAP(){ var b=document.getElementById('ev-ap'); if(!b)return; b.textContent=(b.textContent==='오전'?'오후':'오전'); syncEvTm(); }
 function syncEvTm(){
